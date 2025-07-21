@@ -176,4 +176,4 @@ docker run -d -p 6379:6379 --name runways-redis redis
 
 ## 📬 문의
 
-- 담당자: [이석진](seokjin6635@gmail.com)
+- 담당자: [이석진](mailto:seokjin6635@gmail.com)
