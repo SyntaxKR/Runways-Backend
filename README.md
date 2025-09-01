@@ -15,6 +15,15 @@
 
 ---
 
+## 🏗 시스템 구조도
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/608858f0-bacc-4c21-a0ad-6525f2adf47d"
+       alt="Runways 시스템 구조도" width="90%">
+  <br>
+  <em>그림 1. Runways 시스템 구조도</em>
+</p>
+
 ## 🛠 사용 기술
 
 | 구분 | 기술 |
