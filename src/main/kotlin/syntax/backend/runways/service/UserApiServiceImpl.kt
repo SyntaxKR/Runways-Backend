@@ -20,7 +20,6 @@ class UserApiServiceImpl(
     private val userRepository: UserRepository,
     private val userRankingRepository : UserRankingRepository,
     private val jwtUtil: JwtUtil,
-    private val courseQueryService: CourseQueryService
 ) : UserApiService {
 
     // 토큰에서 유저 정보 가져오기
@@ -42,51 +41,6 @@ class UserApiServiceImpl(
         } else {
             throw Exception("User not found")
         }
-    }
-
-    // 본인 정보 반환
-    override fun getUserInfoFromUserId(userId : String, pageable: Pageable): ResponseMyInfoDTO {
-        val user: Optional<User> = userRepository.findById(userId)
-        if (user.isPresent) {
-            val userInfo = user.get()
-            return ResponseMyInfoDTO(
-                id = userInfo.id,
-                name = userInfo.name,
-                email = userInfo.email,
-                platform = userInfo.platform,
-                profileImage = userInfo.profileImageUrl,
-                birthDate = userInfo.birthdate,
-                gender = userInfo.gender,
-                nickname = userInfo.nickname,
-                follow = userInfo.follow,
-                marketing = userInfo.marketing,
-                accountPrivate = userInfo.accountPrivate,
-                courses = courseQueryService.getCourseList(userId, pageable, false),
-                experience = userInfo.experience
-            )
-        } else {
-            throw EntityNotFoundException("User not found")
-        }
-    }
-
-    // ID로 사용자 정보 반환
-    override fun getUserInfoFromId(senderId : String, receiverId: String, pageable: Pageable): UserProfileWithCoursesDTO {
-        val user = userRepository.findById(receiverId).orElseThrow { EntityNotFoundException("User not found") }
-        val isFollowing = user.follow.isFollower(senderId)
-        val courses = if (user.accountPrivate) {
-            Page.empty(pageable)
-        } else {
-            courseQueryService.getCourseList(receiverId, pageable, true)
-        }
-        return UserProfileWithCoursesDTO(
-            profileImage = user.profileImageUrl,
-            nickname = user.nickname,
-            follow = user.follow,
-            accountPrivate = user.accountPrivate,
-            courses = courses,
-            isFollow = isFollowing,
-            experience = user.experience
-        )
     }
 
     // 사용자 정보 업데이트

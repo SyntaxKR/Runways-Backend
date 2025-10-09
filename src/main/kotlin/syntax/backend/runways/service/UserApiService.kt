@@ -12,7 +12,6 @@ import syntax.backend.runways.entity.User
 interface UserApiService {
     fun getUserDataFromToken(token: String): User
     fun getUserDataFromId(userId: String): User
-    fun getUserInfoFromUserId(userId: String, pageable: Pageable): ResponseMyInfoDTO
     fun updateUserInfo(userId: String, requestUserInfoDTO: RequestUserInfoDTO) : Int
     fun isNicknameDuplicate(nickname: String): Boolean
     fun deleteUser(userId: String)
@@ -22,6 +21,5 @@ interface UserApiService {
     fun removeFollower(senderId: String, receiverId: String)
     fun getFollowerList(userId: String): List<FollowProfileDTO>
     fun getFollowingList(userId: String): List<FollowProfileDTO>
-    fun getUserInfoFromId(senderId: String,receiverId: String, pageable: Pageable): UserProfileWithCoursesDTO
     fun getRankingList(pageable: Pageable): Page<UserRankingDTO>
 }

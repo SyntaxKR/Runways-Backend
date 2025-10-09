@@ -10,6 +10,7 @@ import syntax.backend.runways.dto.RequestUserInfoDTO
 import syntax.backend.runways.dto.ResponseMyInfoDTO
 import syntax.backend.runways.dto.UserProfileWithCoursesDTO
 import syntax.backend.runways.dto.UserRankingDTO
+import syntax.backend.runways.service.ProfileFacadeService
 import syntax.backend.runways.service.UserApiService
 import syntax.backend.runways.util.JwtUtil
 import syntax.backend.runways.util.SecurityUtil
@@ -18,6 +19,7 @@ import syntax.backend.runways.util.SecurityUtil
 @RequestMapping("/api/user")
 class UserApiController(
     private val userApiService: UserApiService,
+    private val profileFacadeService: ProfileFacadeService,
     private val jwtUtil: JwtUtil,
 ) {
 
@@ -46,7 +48,7 @@ class UserApiController(
     ): ResponseEntity<ResponseMyInfoDTO> {
         val pageable = PageRequest.of(page, size)
         val userId = SecurityUtil.getCurrentUserId()
-        val userInfo = userApiService.getUserInfoFromUserId(userId, pageable)
+        val userInfo = profileFacadeService.getMyProfile(userId, pageable)
         return ResponseEntity.ok(userInfo)
     }
 
@@ -58,7 +60,7 @@ class UserApiController(
     ): ResponseEntity<UserProfileWithCoursesDTO> {
         val senderId = SecurityUtil.getCurrentUserId()
         val pageable = PageRequest.of(page, size)
-        val userProfileWithCoursesDTO = userApiService.getUserInfoFromId(senderId, receiverId, pageable)
+        val userProfileWithCoursesDTO = profileFacadeService.getOtherUserProfile(receiverId, senderId, pageable)
         return ResponseEntity.ok(userProfileWithCoursesDTO)
     }
 

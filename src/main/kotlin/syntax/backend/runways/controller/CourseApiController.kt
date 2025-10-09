@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import syntax.backend.runways.dto.*
 import syntax.backend.runways.service.CourseApiService
+import syntax.backend.runways.service.CourseQueryService
 import syntax.backend.runways.util.SecurityUtil
 import java.util.UUID
 
@@ -12,6 +13,7 @@ import java.util.UUID
 @RequestMapping("api/course")
 class CourseApiController(
     private val courseApiService: CourseApiService,
+    private val courseQueryService: CourseQueryService,
 ) {
 
     // 코스 생성
@@ -30,7 +32,7 @@ class CourseApiController(
     ): ResponseEntity<PagedResponse<ResponseMyCourseDTO>> {
         val pageable = PageRequest.of(page, size)
         val userId = SecurityUtil.getCurrentUserId()
-        val courses = courseApiService.getMyCourseList(userId, pageable)
+        val courses = courseQueryService.getCourseList(userId, pageable, status = false)
 
         val pagedResponse = PagedResponse(
             content = courses.content,
@@ -83,7 +85,7 @@ class CourseApiController(
     ): ResponseEntity<PagedResponse<ResponseMyCourseDTO>> {
         val pageable = PageRequest.of(page, size)
         val userId = SecurityUtil.getCurrentUserId()
-        val courses = courseApiService.getBookmarkedCourses(userId, pageable)
+        val courses = courseQueryService.getBookmarkedCourses(userId, pageable)
 
         val pagedResponse = PagedResponse(
             content = courses.content,
@@ -104,7 +106,7 @@ class CourseApiController(
     ): ResponseEntity<PagedResponse<ResponseCourseDTO>> {
         val pageable = PageRequest.of(page, size)
         val userId = SecurityUtil.getCurrentUserId()
-        val courses = courseApiService.getAllCourses(userId, pageable)
+        val courses = courseQueryService.getAllCourses(userId, pageable)
 
         val pagedResponse = PagedResponse(
             content = courses.content,
@@ -134,7 +136,7 @@ class CourseApiController(
     ): ResponseEntity<PagedResponse<ResponseCourseDTO>> {
         val pageable = PageRequest.of(page, size)
         val userId = SecurityUtil.getCurrentUserId()
-        val courses = courseApiService.searchCoursesByTitle(title, userId, pageable)
+        val courses = courseQueryService.searchCoursesByTitle(title, userId, pageable)
 
         val pagedResponse = PagedResponse(
             content = courses.content,
@@ -156,7 +158,11 @@ class CourseApiController(
 
     // 추천 코스 조회
     @GetMapping("/recommend")
-    fun getRecommendedCourses(@RequestParam nx : Double, ny: Double, city: String): ResponseEntity<List<ResponseRecommendCourseDTO>> {
+    fun getRecommendedCourses(
+        @RequestParam nx: Double,
+        ny: Double,
+        city: String
+    ): ResponseEntity<List<ResponseRecommendCourseDTO>> {
         val userId = SecurityUtil.getCurrentUserId()
         val recommendedCourses = courseApiService.getCombinedRecommendCourses(nx, ny, city, userId)
         return ResponseEntity.ok(recommendedCourses)
@@ -171,7 +177,7 @@ class CourseApiController(
     ): ResponseEntity<PagedResponse<ResponseCourseDTO>> {
         val pageable = PageRequest.of(page, size)
         val userId = SecurityUtil.getCurrentUserId()
-        val courses = courseApiService.searchCoursesByTag(tagName, userId, pageable)
+        val courses = courseQueryService.searchCoursesByTag(tagName, userId, pageable)
 
         val pagedResponse = PagedResponse(
             content = courses.content,
@@ -183,6 +189,4 @@ class CourseApiController(
 
         return ResponseEntity.ok(pagedResponse)
     }
-
-
 }
