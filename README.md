@@ -20,7 +20,15 @@
 
 ![image](https://github.com/user-attachments/assets/64a9c359-957f-4053-b0f8-0960acb0a306)
 
----
+## 🏗 시스템 구조도
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/608858f0-bacc-4c21-a0ad-6525f2adf47d"
+       alt="Runways 시스템 구조도" width="90%">
+  <br>
+  <em>그림 1. Runways 시스템 구조도</em>
+</p>
+
 ## 🛠 사용 기술
 
 | 구분 | 기술 |
@@ -189,4 +197,4 @@ docker run -d -p 6379:6379 --name runways-redis redis
 
 ## 📬 문의
 
-- 담당자: [이석진](seokjin6635@gmail.com)
+- 담당자: [이석진](mailto:seokjin6635@gmail.com)
