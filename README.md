@@ -18,12 +18,9 @@
 
 ## ⚙️ 프로젝트 구조
 
-![image](https://github.com/user-attachments/assets/64a9c359-957f-4053-b0f8-0960acb0a306)
-
-## 🏗 시스템 구조도
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/608858f0-bacc-4c21-a0ad-6525f2adf47d"
+  <img src="https://github.com/user-attachments/assets/3207ed84-a5ff-4ed1-b246-8384a6a6793f"
        alt="Runways 시스템 구조도" width="90%">
   <br>
   <em>그림 1. Runways 시스템 구조도</em>
