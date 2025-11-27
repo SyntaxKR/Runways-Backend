@@ -14,6 +14,11 @@
 - 프론트엔드 앱(React Native)과 연동되어 사용자 피드백 및 코스 시각화 제공
 
 ---
+---
+
+## ⚙️ 프로젝트 구조
+
+![image](https://github.com/user-attachments/assets/64a9c359-957f-4053-b0f8-0960acb0a306)
 
 ## 🏗 시스템 구조도
 
@@ -73,20 +78,27 @@
 ## 📂 디렉토리 구조
 
 ```
-RunnerPartner-Backend/
+Runways-Backend/
 ├── src/
 │   ├── main/
 │   │   ├── kotlin/
 │   │   │   └── syntax/backend/runways/
-│   │   │       ├── controller/      # API 컨트롤러 클래스
-│   │   │       ├── dto/             # 데이터 전송 객체 (DTO)
-│   │   │       ├── service/         # 비즈니스 로직 처리
-│   │   │       └── util/            # 공통 유틸리티 클래스
+│   │   │       ├── config/         # 소켓, Redis, OAuth 등 전역 설정 관리
+│   │   │       ├── controller/     # API 요청을 처리하는 컨트롤러 클래스
+│   │   │       ├── dto/            # 클라이언트와 주고받는 데이터 전송 객체 (DTO)
+│   │   │       ├── entity/         # DB 테이블과 매핑되는 JPA 엔티티 클래스
+│   │   │       ├── event/          # 도메인 이벤트 기반 비동기 후처리 로직 (@TransactionalEventListener 등)
+│   │   │       ├── interceptor/    # 인증, 로깅 등을 처리하는 요청 인터셉터 클래스
+│   │   │       ├── repository/     # 데이터베이스 접근을 위한 JPA 레포지토리 인터페이스
+│   │   │       ├── scheduler/      # 정기 작업(Scheduler) 처리 클래스 (예: 코스 이용 통계 집계)
+│   │   │       ├── service/        # 핵심 비즈니스 로직을 담당하는 서비스 계층
+│   │   │       └── util/           # 거리 계산, 사용자 정보 처리 등 공통 유틸리티 클래스
 │   │   ├── resources/
-│   │   │   ├── application.properties      # Spring Boot 설정 파일 
-├── build.gradle.kts                 # Gradle 빌드 설정 (Kotlin DSL)
-├── settings.gradle.kts              # Gradle 프로젝트 설정
-└── README.md                        # 프로젝트 설명 파일
+│   │   │   └── application.properties  # Spring Boot 애플리케이션 설정 파일
+├── build.gradle.kts                 # Gradle 빌드 설정 파일 (Kotlin DSL)
+├── settings.gradle.kts              # Gradle 프로젝트 구성 설정
+└── README.md                        # 프로젝트 소개 및 사용법 설명 문서
+
 ```
 
 ---
