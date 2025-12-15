@@ -45,7 +45,7 @@ dependencies {
     implementation("com.google.firebase:firebase-admin:9.2.0")
     implementation("org.locationtech.jts:jts-core:1.18.2")
     implementation("org.locationtech.jts.io:jts-io-common:1.20.0")
-    implementation("org.hibernate:hibernate-spatial:6.2.0.Final")
+    implementation("org.hibernate.orm:hibernate-spatial")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.security:spring-security-messaging")
