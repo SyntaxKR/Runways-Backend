@@ -11,8 +11,7 @@ data class PerformanceResult(
     val memoryUsedMB: Double,            // 메모리 사용량 (MB)
     val cpuTimeMs: Long,                 // CPU 시간 (ms)
     val cpuUsagePercent: Double,         // CPU 사용률 (%)
-    val queryCount: Int = 0,             // 쿼리 실행 횟수
-    val networkRoundTrips: String = ""   // 네트워크 왕복 (설명)
+    val queryCount: Int = 0              // 쿼리 실행 횟수 (= 네트워크 왕복 횟수)
 )
 
 /**
@@ -49,7 +48,7 @@ class PerformanceMetrics {
     /**
      * 측정 종료 및 결과 반환
      */
-    fun end(queryCount: Int = 0, networkRoundTrips: String = ""): PerformanceResult {
+    fun end(queryCount: Int = 0): PerformanceResult {
         val executionTime = System.currentTimeMillis() - startTime
         val afterCpuTime = threadBean.currentThreadCpuTime
 
@@ -71,8 +70,7 @@ class PerformanceMetrics {
             memoryUsedMB = memoryUsed,
             cpuTimeMs = cpuTime,
             cpuUsagePercent = cpuUsage,
-            queryCount = queryCount,
-            networkRoundTrips = networkRoundTrips
+            queryCount = queryCount
         )
     }
 
@@ -81,12 +79,11 @@ class PerformanceMetrics {
      */
     inline fun <T> measure(
         queryCount: Int = 0,
-        networkRoundTrips: String = "",
         block: () -> T
     ): Pair<T, PerformanceResult> {
         start()
         val result = block()
-        val metrics = end(queryCount, networkRoundTrips)
+        val metrics = end(queryCount)
         return result to metrics
     }
 }
@@ -102,9 +99,6 @@ fun PerformanceResult.format(): String {
         appendLine("CPU 사용률: ${"%.2f".format(cpuUsagePercent)}%")
         if (queryCount > 0) {
             appendLine("쿼리 횟수: ${queryCount}회")
-        }
-        if (networkRoundTrips.isNotEmpty()) {
-            appendLine("네트워크: $networkRoundTrips")
         }
     }
 }

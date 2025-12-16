@@ -15,7 +15,6 @@ data class BenchmarkConfig(
 data class BenchmarkMethod(
     val name: String,                       // 메서드 이름
     val queryCount: (dataSize: Int) -> Int, // 쿼리 횟수 계산 함수
-    val networkDescription: (dataSize: Int) -> String,  // 네트워크 설명
     val action: (dataSize: Int) -> Unit     // 실행할 작업
 )
 
@@ -33,7 +32,6 @@ data class BenchmarkMethod(
  * benchmark.addMethod(BenchmarkMethod(
  *     name = "JPA",
  *     queryCount = { size -> size },
- *     networkDescription = { size -> "$size번 (개별 INSERT)" },
  *     action = { size -> insertWithJpa(size) }
  * ))
  *
@@ -94,8 +92,7 @@ class PerformanceBenchmark(
                 method.action(size)
 
                 val perfResult = metrics.end(
-                    queryCount = method.queryCount(size),
-                    networkRoundTrips = method.networkDescription(size)
+                    queryCount = method.queryCount(size)
                 )
 
                 cleanupAfterEach?.invoke()

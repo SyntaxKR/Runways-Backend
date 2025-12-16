@@ -32,17 +32,15 @@ fun `성능 비교 테스트`() {
     benchmark.addMethod(
         BenchmarkMethod(
             name = "JPA 방식",
-            queryCount = { size -> size },                    // 쿼리 횟수
-            networkDescription = { size -> "$size번 실행" },  // 네트워크 설명
-            action = { size -> insertWithJPA(size) }          // 실행할 작업
+            queryCount = { size -> size },               // 쿼리 횟수
+            action = { size -> insertWithJPA(size) }     // 실행할 작업
         )
     )
 
     benchmark.addMethod(
         BenchmarkMethod(
             name = "JDBC Batch",
-            queryCount = { 1 },
-            networkDescription = { "1번 (배치)" },
+            queryCount = { 1 },                          // 배치: 1번의 쿼리
             action = { size -> insertWithJDBC(size) }
         )
     )
@@ -57,9 +55,9 @@ fun `성능 비교 테스트`() {
 
 ```kotlin
 benchmark.addMethods(
-    BenchmarkMethod("방법 1", { 10 }, { "설명 1" }) { size -> method1(size) },
-    BenchmarkMethod("방법 2", { 5 }, { "설명 2" }) { size -> method2(size) },
-    BenchmarkMethod("방법 3", { 1 }, { "설명 3" }) { size -> method3(size) }
+    BenchmarkMethod("방법 1", { 10 }) { size -> method1(size) },
+    BenchmarkMethod("방법 2", { 5 }) { size -> method2(size) },
+    BenchmarkMethod("방법 3", { 1 }) { size -> method3(size) }
 )
 ```
 
@@ -72,11 +70,11 @@ PerformanceResultFormatter.printTable(results)
 
 출력:
 ```
-방법                  | 실행시간   | 메모리사용 | CPU사용  | 쿼리횟수 | 네트워크
----------------------------------------------------------------------------------
-Pure JDBC Batch       |      3ms |   0.50MB |   0.00% |      1회 | 1번 (배치)
-PostgreSQL COPY       |      4ms |   0.50MB | 100.00% |      1회 | 1번 (스트림)
-JPA                   |    558ms |  21.86MB |  78.32% |    100회 | 100번 (개별)
+방법                  | 실행시간   | 메모리사용 | CPU사용  | 쿼리횟수
+-----------------------------------------------------------------------------
+Pure JDBC Batch       |      3ms |   0.50MB |   0.00% |      1회
+PostgreSQL COPY       |      4ms |   0.50MB | 100.00% |      1회
+JPA                   |    558ms |  21.86MB |  78.32% |    100회
 ```
 
 #### 간단한 비교
@@ -100,10 +98,10 @@ PerformanceResultFormatter.printMarkdown(results)
 ```markdown
 ## 100 개 데이터 삽입
 
-| 방법 | 실행시간 | 메모리사용 | CPU사용 | 쿼리횟수 | 네트워크 |
-|------|---------|-----------|---------|---------|---------|
-| Pure JDBC Batch | 3ms | 0.50MB | 0.00% | 1회 | 1번 (배치) |
-| PostgreSQL COPY | 4ms | 0.50MB | 100.00% | 1회 | 1번 (스트림) |
+| 방법 | 실행시간 | 메모리사용 | CPU사용 | 쿼리횟수 |
+|------|---------|-----------|---------|---------|
+| Pure JDBC Batch | 3ms | 0.50MB | 0.00% | 1회 |
+| PostgreSQL COPY | 4ms | 0.50MB | 100.00% | 1회 |
 ```
 
 #### CSV 형식 (엑셀용)
@@ -113,9 +111,9 @@ PerformanceResultFormatter.printCSV(results)
 
 출력:
 ```csv
-데이터크기,방법,실행시간(ms),메모리(MB),CPU(%),쿼리횟수,네트워크
-100,Pure JDBC Batch,3,0.50,0.00,1,1번 (배치)
-100,PostgreSQL COPY,4,0.50,100.00,1,1번 (스트림)
+데이터크기,방법,실행시간(ms),메모리(MB),CPU(%),쿼리횟수
+100,Pure JDBC Batch,3,0.50,0.00,1
+100,PostgreSQL COPY,4,0.50,100.00,1
 ```
 
 #### 분석 결과
@@ -142,7 +140,7 @@ CPU, 메모리 사용량을 측정하는 유틸리티
 val metrics = PerformanceMetrics()
 metrics.start()
 // ... 작업 수행
-val result = metrics.end(queryCount = 10, networkRoundTrips = "1번")
+val result = metrics.end(queryCount = 10)  
 println(result.format())
 ```
 

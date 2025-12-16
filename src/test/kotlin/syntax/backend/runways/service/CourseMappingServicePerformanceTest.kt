@@ -241,7 +241,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "JPA (saveAllAndFlush)",
                 queryCount = { size -> size },
-                networkDescription = { size -> "${size}번 (개별 INSERT)" },
                 action = { size ->
                     courseMappingService.bulkInsertWithJpa(testCourse.id, availableGids.take(size))
                     verifyInsertCount(size)
@@ -250,7 +249,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "JdbcTemplate Batch",
                 queryCount = { size -> ceil(size.toDouble() / 100).toInt() },
-                networkDescription = { size -> "${ceil(size.toDouble() / 100).toInt()}번 (100개씩 배치)" },
                 action = { size ->
                     courseMappingService.bulkInsertWithJdbcTemplate(testCourse.id, availableGids.take(size))
                     verifyInsertCount(size)
@@ -259,7 +257,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "Pure JDBC Batch",
                 queryCount = { 1 },
-                networkDescription = { size -> "1번 (${size}개 한 번에 배치)" },
                 action = { size ->
                     courseMappingService.bulkInsertWithJdbc(testCourse.id, availableGids.take(size))
                     verifyInsertCount(size)
@@ -268,7 +265,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "Native Query (Single INSERT)",
                 queryCount = { size -> ceil(size.toDouble() / 1000).toInt() },
-                networkDescription = { size -> "${ceil(size.toDouble() / 1000).toInt()}번 (${minOf(size, 1000)}개씩 단일 INSERT)" },
                 action = { size ->
                     courseMappingService.bulkInsertWithNativeQuery(testCourse.id, availableGids.take(size))
                     verifyInsertCount(size)
@@ -277,7 +273,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "PostgreSQL COPY",
                 queryCount = { 1 },
-                networkDescription = { "1번 (스트림 전송)" },
                 action = { size ->
                     courseMappingService.bulkInsertWithCopy(testCourse.id, availableGids.take(size))
                     verifyInsertCount(size)
@@ -316,7 +311,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "JPA (saveAllAndFlush)",
                 queryCount = { size -> size },
-                networkDescription = { size -> "${size}번 (개별 INSERT)" },
                 action = { size ->
                     val testGids = availableGids.take(size)
                     courseMappingService.bulkInsertWithJpa(testCourse.id, testGids)
@@ -326,7 +320,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "JdbcTemplate Batch",
                 queryCount = { size -> ceil(size.toDouble() / 100).toInt() },
-                networkDescription = { size -> "${ceil(size.toDouble() / 100).toInt()}번 (100개씩 배치)" },
                 action = { size ->
                     val testGids = availableGids.take(size)
                     courseMappingService.bulkInsertWithJdbcTemplate(testCourse.id, testGids)
@@ -336,7 +329,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "Pure JDBC Batch",
                 queryCount = { 1 },
-                networkDescription = { size -> "1번 (${size}개 한 번에 배치)" },
                 action = { size ->
                     val testGids = availableGids.take(size)
                     courseMappingService.bulkInsertWithJdbc(testCourse.id, testGids)
@@ -346,7 +338,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "Native Query (Single INSERT)",
                 queryCount = { size -> ceil(size.toDouble() / 1000).toInt() },
-                networkDescription = { size -> "${ceil(size.toDouble() / 1000).toInt()}번 (${minOf(size, 1000)}개씩 단일 INSERT)" },
                 action = { size ->
                     val testGids = availableGids.take(size)
                     courseMappingService.bulkInsertWithNativeQuery(testCourse.id, testGids)
@@ -356,7 +347,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             BenchmarkMethod(
                 name = "PostgreSQL COPY",
                 queryCount = { 1 },
-                networkDescription = { "1번 (스트림 전송)" },
                 action = { size ->
                     val testGids = availableGids.take(size)
                     courseMappingService.bulkInsertWithCopy(testCourse.id, testGids)
