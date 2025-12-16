@@ -19,6 +19,6 @@ interface CourseSegmentMappingRepository : JpaRepository<CourseSegmentMapping, L
     @Query("SELECT c.segmentGid FROM CourseSegmentMapping c WHERE c.course.id = :courseId")
     fun findSegmentGidsByCourseId(@Param("courseId") courseId: UUID): List<Int>
 
-
-
+    @Query("SELECT c FROM CourseSegmentMapping c WHERE c.course.id = :courseId")
+    fun findByCourseId(@Param("courseId") courseId: UUID): List<CourseSegmentMapping>
 }
