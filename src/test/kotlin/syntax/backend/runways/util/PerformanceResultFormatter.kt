@@ -23,8 +23,8 @@ object PerformanceResultFormatter {
         println()
 
         // 헤더 출력
-        println("%-35s | %10s | %12s | %10s | %15s | %s".format(
-            "방법", "실행시간", "메모리사용", "CPU사용", "쿼리횟수", "네트워크"
+        println("%-35s | %10s | %12s | %10s | %15s".format(
+            "방법", "실행시간", "메모리사용", "CPU사용", "쿼리횟수"
         ))
         println("-".repeat(100))
 
@@ -33,13 +33,12 @@ object PerformanceResultFormatter {
 
         // 데이터 출력
         sortedResults.forEach { result ->
-            println("%-35s | %8dms | %10.2fMB | %8.2f%% | %13d회 | %s".format(
+            println("%-35s | %8dms | %10.2fMB | %8.2f%% | %13d회".format(
                 result.methodName,
                 result.performance.executionTimeMs,
                 result.performance.memoryUsedMB,
                 result.performance.cpuUsagePercent,
-                result.performance.queryCount,
-                result.performance.networkRoundTrips
+                result.performance.queryCount
             ))
         }
 
@@ -74,15 +73,14 @@ object PerformanceResultFormatter {
      * CSV 형식으로 출력 (엑셀에서 사용 가능)
      */
     fun printCSV(results: Map<Int, List<BenchmarkResult>>) {
-        println("데이터크기,방법,실행시간(ms),메모리(MB),CPU(%),쿼리횟수,네트워크")
+        println("데이터크기,방법,실행시간(ms),메모리(MB),CPU(%),쿼리횟수")
 
         results.forEach { (size, benchmarkResults) ->
             benchmarkResults.forEach { result ->
                 println("$size,${result.methodName},${result.performance.executionTimeMs}," +
                         "${"%.2f".format(result.performance.memoryUsedMB)}," +
                         "${"%.2f".format(result.performance.cpuUsagePercent)}," +
-                        "${result.performance.queryCount}," +
-                        "${result.performance.networkRoundTrips}")
+                        "${result.performance.queryCount}")
             }
         }
     }
@@ -93,8 +91,8 @@ object PerformanceResultFormatter {
     fun printMarkdown(results: Map<Int, List<BenchmarkResult>>) {
         results.forEach { (size, benchmarkResults) ->
             println("\n## $size 개 데이터 삽입\n")
-            println("| 방법 | 실행시간 | 메모리사용 | CPU사용 | 쿼리횟수 | 네트워크 |")
-            println("|------|---------|-----------|---------|---------|---------|")
+            println("| 방법 | 실행시간 | 메모리사용 | CPU사용 | 쿼리횟수 |")
+            println("|------|---------|-----------|---------|---------|")
 
             val sortedResults = benchmarkResults.sortedBy { it.performance.executionTimeMs }
 
@@ -102,8 +100,7 @@ object PerformanceResultFormatter {
                 println("| ${result.methodName} | ${result.performance.executionTimeMs}ms | " +
                         "${"%.2f".format(result.performance.memoryUsedMB)}MB | " +
                         "${"%.2f".format(result.performance.cpuUsagePercent)}% | " +
-                        "${result.performance.queryCount}회 | " +
-                        "${result.performance.networkRoundTrips} |")
+                        "${result.performance.queryCount}회 |")
             }
 
             println()
@@ -129,7 +126,7 @@ object PerformanceResultFormatter {
             val leastMemory = benchmarkResults.minBy { it.performance.memoryUsedMB }
             println("- 메모리 최소: ${leastMemory.methodName} (${"%.2f".format(leastMemory.performance.memoryUsedMB)}MB)")
 
-            // 네트워크 효율성
+            // 쿼리 효율성
             val leastQueries = benchmarkResults.minBy { it.performance.queryCount }
             println("- 쿼리 최소: ${leastQueries.methodName} (${leastQueries.performance.queryCount}회)")
 
