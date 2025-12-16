@@ -3,39 +3,60 @@ package syntax.backend.runways.service
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.locationtech.jts.geom.Coordinate
+import org.locationtech.jts.geom.GeometryFactory
+import org.locationtech.jts.geom.LineString
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
+import syntax.backend.runways.entity.Course
+import syntax.backend.runways.entity.CourseDifficulty
+import syntax.backend.runways.repository.CourseRepository
+import syntax.backend.runways.repository.CourseSegmentMappingRepository
+import syntax.backend.runways.repository.UserRepository
+import syntax.backend.runways.util.*
+import kotlin.math.ceil
 import kotlin.system.measureTimeMillis
 
 @SpringBootTest(properties = ["spring.profiles.active=test"])
 class CourseMappingServicePerformanceTest @Autowired constructor(
     private val courseMappingService: CourseMappingService,
+    private val courseRepository: CourseRepository,
+    private val courseSegmentMappingRepository: CourseSegmentMappingRepository,
+    private val userRepository: UserRepository,
     private val jdbcTemplate: JdbcTemplate
 ) {
-
-    private lateinit var testCourseId: UUID
+    private val geometryFactory = GeometryFactory()
+    private lateinit var testCourse: Course
     private val testDataSizes = listOf(100, 500, 1000)
     private lateinit var availableGids: List<Int>
 
     @BeforeEach
     fun setup() {
-        testCourseId = jdbcTemplate.queryForObject(
-            """
-            SELECT c.id FROM courses c
-            LEFT JOIN course_segment_mapping csm ON c.id = csm.course_id
-            WHERE csm.id IS NULL
-            LIMIT 1
-            """,
-            UUID::class.java
-        ) ?: run {
-            println("매핑이 없는 코스가 없습니다. 전체 매핑 데이터를 삭제합니다.")
-            jdbcTemplate.update("DELETE FROM course_segment_mapping")
-            jdbcTemplate.queryForObject("SELECT id FROM courses LIMIT 1", UUID::class.java)
-                ?: throw IllegalStateException("테스트용 Course가 없습니다.")
-        }
+        val testUser = userRepository.findAll().firstOrNull()
+            ?: throw IllegalStateException("테스트를 위해 최소 1명의 유저가 필요합니다.")
+
+        val coordinates = arrayOf(
+            Coordinate(126.9780, 37.5665),
+            Coordinate(126.9810, 37.5670),
+            Coordinate(126.9840, 37.5675)
+        )
+
+        val lineString: LineString = geometryFactory.createLineString(coordinates)
+
+        testCourse = Course(
+            title = "성능테스트 코스",
+            maker = testUser,
+            coordinate = lineString,
+            distance = 1000.0f,
+            difficulty = CourseDifficulty.EASY,
+            position = geometryFactory.createPoint(Coordinate(126.9780, 37.5665)),
+            mapUrl = "https://test.com/map",
+            sido = "경기도",
+            sigungu = "파주시"
+        )
+
+        testCourse = courseRepository.save(testCourse)
 
         availableGids = jdbcTemplate.queryForList(
             "SELECT gid FROM walkroads LIMIT 2000",
@@ -46,41 +67,14 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             throw IllegalStateException("테스트를 위해 최소 1000개의 walkroads gid가 필요합니다. 현재: ${availableGids.size}개")
         }
 
-        val deleted = javax.sql.DataSource::class.java.cast(jdbcTemplate.dataSource).connection.use { conn ->
-            conn.autoCommit = true
-            conn.prepareStatement("DELETE FROM course_segment_mapping WHERE course_id = ?").use { stmt ->
-                stmt.setObject(1, testCourseId)
-                stmt.executeUpdate()
-            }
-        }
-
-        // 시퀀스를 현재 최대값 이후로 설정 (중복 방지)
-        jdbcTemplate.execute("""
-            SELECT setval('course_segment_mapping_id_seq',
-                COALESCE((SELECT MAX(id) FROM course_segment_mapping), 0) + 1000,
-                false)
-        """)
-
-        println("테스트 준비: Course ID = $testCourseId, 삭제된 매핑 = $deleted 개, 사용 가능한 GID = ${availableGids.size}개")
+        println("테스트 준비: Course ID = ${testCourse.id}, 사용 가능한 GID = ${availableGids.size}개")
     }
 
     @AfterEach
     fun cleanup() {
-        cleanupTestData()
+        courseSegmentMappingRepository.deleteByCourseId(testCourse.id)
+        courseRepository.delete(testCourse)
         println("테스트 데이터 정리 완료")
-    }
-
-    private fun cleanupTestData() {
-        javax.sql.DataSource::class.java.cast(jdbcTemplate.dataSource).connection.use { conn ->
-            conn.autoCommit = true
-            val deleted = conn.prepareStatement("DELETE FROM course_segment_mapping WHERE course_id = ?").use { stmt ->
-                stmt.setObject(1, testCourseId)
-                stmt.executeUpdate()
-            }
-            if (deleted > 0) {
-                println("  → $deleted 개 데이터 삭제됨")
-            }
-        }
     }
 
     @Test
@@ -97,41 +91,41 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             val results = mutableMapOf<String, Long>()
 
             // 1. JPA 방식
-            cleanupTestData()
+            courseSegmentMappingRepository.deleteByCourseId(testCourse.id)
             val jpaTime = measureTimeMillis {
-                courseMappingService.bulkInsertWithJpa(testCourseId, testGids)
+                courseMappingService.bulkInsertWithJpa(testCourse.id, testGids)
             }
             results["JPA (saveAllAndFlush)"] = jpaTime
             verifyInsertCount(size)
 
             // 2. JdbcTemplate Batch
-            cleanupTestData()
+            courseSegmentMappingRepository.deleteByCourseId(testCourse.id)
             val jdbcTemplateTime = measureTimeMillis {
-                courseMappingService.bulkInsertWithJdbcTemplate(testCourseId, testGids)
+                courseMappingService.bulkInsertWithJdbcTemplate(testCourse.id, testGids)
             }
             results["JdbcTemplate Batch"] = jdbcTemplateTime
             verifyInsertCount(size)
 
             // 3. 순수 JDBC Batch
-            cleanupTestData()
+            courseSegmentMappingRepository.deleteByCourseId(testCourse.id)
             val jdbcTime = measureTimeMillis {
-                courseMappingService.bulkInsertWithJdbc(testCourseId, testGids)
+                courseMappingService.bulkInsertWithJdbc(testCourse.id, testGids)
             }
             results["Pure JDBC Batch"] = jdbcTime
             verifyInsertCount(size)
 
             // 4. Native Query
-            cleanupTestData()
+            courseSegmentMappingRepository.deleteByCourseId(testCourse.id)
             val nativeQueryTime = measureTimeMillis {
-                courseMappingService.bulkInsertWithNativeQuery(testCourseId, testGids)
+                courseMappingService.bulkInsertWithNativeQuery(testCourse.id, testGids)
             }
             results["Native Query (Single INSERT)"] = nativeQueryTime
             verifyInsertCount(size)
 
             // 5. PostgreSQL COPY
-            cleanupTestData()
+            courseSegmentMappingRepository.deleteByCourseId(testCourse.id)
             val copyTime = measureTimeMillis {
-                courseMappingService.bulkInsertWithCopy(testCourseId, testGids)
+                courseMappingService.bulkInsertWithCopy(testCourse.id, testGids)
             }
             results["PostgreSQL COPY"] = copyTime
             verifyInsertCount(size)
@@ -150,7 +144,7 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
             }
 
             println()
-            cleanupTestData()
+            courseSegmentMappingRepository.deleteByCourseId(testCourse.id)
         }
 
         println("\n" + "=".repeat(80))
@@ -159,7 +153,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
     }
 
     @Test
-    @Transactional
     fun `개별 성능 테스트 - JPA`() {
         val size = 1000
         val testGids = availableGids.take(size)
@@ -167,7 +160,7 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
         println("\n[ JPA 방식 성능 테스트: $size 개 ]")
 
         val time = measureTimeMillis {
-            courseMappingService.bulkInsertWithJpa(testCourseId, testGids)
+            courseMappingService.bulkInsertWithJpa(testCourse.id, testGids)
         }
 
         println("실행 시간: $time ms")
@@ -175,7 +168,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
     }
 
     @Test
-    @Transactional
     fun `개별 성능 테스트 - JdbcTemplate`() {
         val size = 1000
         val testGids = availableGids.take(size)
@@ -183,7 +175,7 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
         println("\n[ JdbcTemplate 방식 성능 테스트: $size 개 ]")
 
         val time = measureTimeMillis {
-            courseMappingService.bulkInsertWithJdbcTemplate(testCourseId, testGids)
+            courseMappingService.bulkInsertWithJdbcTemplate(testCourse.id, testGids)
         }
 
         println("실행 시간: $time ms")
@@ -191,7 +183,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
     }
 
     @Test
-    @Transactional
     fun `개별 성능 테스트 - JDBC`() {
         val size = 1000
         val testGids = availableGids.take(size)
@@ -199,7 +190,7 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
         println("\n[ 순수 JDBC 방식 성능 테스트: $size 개 ]")
 
         val time = measureTimeMillis {
-            courseMappingService.bulkInsertWithJdbc(testCourseId, testGids)
+            courseMappingService.bulkInsertWithJdbc(testCourse.id, testGids)
         }
 
         println("실행 시간: $time ms")
@@ -207,7 +198,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
     }
 
     @Test
-    @Transactional
     fun `개별 성능 테스트 - Native Query`() {
         val size = 1000
         val testGids = availableGids.take(size)
@@ -215,7 +205,7 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
         println("\n[ Native Query 방식 성능 테스트: $size 개 ]")
 
         val time = measureTimeMillis {
-            courseMappingService.bulkInsertWithNativeQuery(testCourseId, testGids)
+            courseMappingService.bulkInsertWithNativeQuery(testCourse.id, testGids)
         }
 
         println("실행 시간: $time ms")
@@ -223,7 +213,6 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
     }
 
     @Test
-    @Transactional
     fun `개별 성능 테스트 - PostgreSQL COPY`() {
         val size = 1000
         val testGids = availableGids.take(size)
@@ -231,18 +220,175 @@ class CourseMappingServicePerformanceTest @Autowired constructor(
         println("\n[ PostgreSQL COPY 방식 성능 테스트: $size 개 ]")
 
         val time = measureTimeMillis {
-            courseMappingService.bulkInsertWithCopy(testCourseId, testGids)
+            courseMappingService.bulkInsertWithCopy(testCourse.id, testGids)
         }
 
         println("실행 시간: $time ms")
         verifyInsertCount(size)
     }
 
+    @Test
+    fun `자원 사용량 상세 비교 테스트`() {
+        val benchmark = PerformanceBenchmark(
+            config = BenchmarkConfig(
+                name = "Bulk Insert 자원 사용량 상세 비교",
+                dataSizes = testDataSizes
+            ),
+            setupBeforeEach = { courseSegmentMappingRepository.deleteByCourseId(testCourse.id) }
+        )
+
+        benchmark.addMethods(
+            BenchmarkMethod(
+                name = "JPA (saveAllAndFlush)",
+                queryCount = { size -> size },
+                networkDescription = { size -> "${size}번 (개별 INSERT)" },
+                action = { size ->
+                    courseMappingService.bulkInsertWithJpa(testCourse.id, availableGids.take(size))
+                    verifyInsertCount(size)
+                }
+            ),
+            BenchmarkMethod(
+                name = "JdbcTemplate Batch",
+                queryCount = { size -> ceil(size.toDouble() / 100).toInt() },
+                networkDescription = { size -> "${ceil(size.toDouble() / 100).toInt()}번 (100개씩 배치)" },
+                action = { size ->
+                    courseMappingService.bulkInsertWithJdbcTemplate(testCourse.id, availableGids.take(size))
+                    verifyInsertCount(size)
+                }
+            ),
+            BenchmarkMethod(
+                name = "Pure JDBC Batch",
+                queryCount = { 1 },
+                networkDescription = { size -> "1번 (${size}개 한 번에 배치)" },
+                action = { size ->
+                    courseMappingService.bulkInsertWithJdbc(testCourse.id, availableGids.take(size))
+                    verifyInsertCount(size)
+                }
+            ),
+            BenchmarkMethod(
+                name = "Native Query (Single INSERT)",
+                queryCount = { size -> ceil(size.toDouble() / 1000).toInt() },
+                networkDescription = { size -> "${ceil(size.toDouble() / 1000).toInt()}번 (${minOf(size, 1000)}개씩 단일 INSERT)" },
+                action = { size ->
+                    courseMappingService.bulkInsertWithNativeQuery(testCourse.id, availableGids.take(size))
+                    verifyInsertCount(size)
+                }
+            ),
+            BenchmarkMethod(
+                name = "PostgreSQL COPY",
+                queryCount = { 1 },
+                networkDescription = { "1번 (스트림 전송)" },
+                action = { size ->
+                    courseMappingService.bulkInsertWithCopy(testCourse.id, availableGids.take(size))
+                    verifyInsertCount(size)
+                }
+            )
+        )
+
+        val results = benchmark.run()
+
+        PerformanceResultFormatter.printTable(results)
+
+        println("\n" + "=".repeat(100))
+        println("간단한 성능 비교")
+        println("=".repeat(100))
+        PerformanceResultFormatter.printSimpleComparison(results)
+
+        println("\n" + "=".repeat(100))
+        println("성능 분석")
+        println("=".repeat(100))
+        PerformanceResultFormatter.printAnalysis(results)
+    }
+
+
+    @Test
+    fun `프레임워크 사용 - 자원 사용량 비교`() {
+        val benchmark = PerformanceBenchmark(
+            config = BenchmarkConfig(
+                name = "Bulk Insert 자원 사용량 상세 비교 (프레임워크 버전)",
+                dataSizes = listOf(100, 500, 1000)
+            ),
+            setupBeforeEach = { courseSegmentMappingRepository.deleteByCourseId(testCourse.id) },
+            cleanupAfterEach = { /* 추가 정리 작업 */ }
+        )
+
+        benchmark.addMethods(
+            BenchmarkMethod(
+                name = "JPA (saveAllAndFlush)",
+                queryCount = { size -> size },
+                networkDescription = { size -> "${size}번 (개별 INSERT)" },
+                action = { size ->
+                    val testGids = availableGids.take(size)
+                    courseMappingService.bulkInsertWithJpa(testCourse.id, testGids)
+                    verifyInsertCount(size)
+                }
+            ),
+            BenchmarkMethod(
+                name = "JdbcTemplate Batch",
+                queryCount = { size -> ceil(size.toDouble() / 100).toInt() },
+                networkDescription = { size -> "${ceil(size.toDouble() / 100).toInt()}번 (100개씩 배치)" },
+                action = { size ->
+                    val testGids = availableGids.take(size)
+                    courseMappingService.bulkInsertWithJdbcTemplate(testCourse.id, testGids)
+                    verifyInsertCount(size)
+                }
+            ),
+            BenchmarkMethod(
+                name = "Pure JDBC Batch",
+                queryCount = { 1 },
+                networkDescription = { size -> "1번 (${size}개 한 번에 배치)" },
+                action = { size ->
+                    val testGids = availableGids.take(size)
+                    courseMappingService.bulkInsertWithJdbc(testCourse.id, testGids)
+                    verifyInsertCount(size)
+                }
+            ),
+            BenchmarkMethod(
+                name = "Native Query (Single INSERT)",
+                queryCount = { size -> ceil(size.toDouble() / 1000).toInt() },
+                networkDescription = { size -> "${ceil(size.toDouble() / 1000).toInt()}번 (${minOf(size, 1000)}개씩 단일 INSERT)" },
+                action = { size ->
+                    val testGids = availableGids.take(size)
+                    courseMappingService.bulkInsertWithNativeQuery(testCourse.id, testGids)
+                    verifyInsertCount(size)
+                }
+            ),
+            BenchmarkMethod(
+                name = "PostgreSQL COPY",
+                queryCount = { 1 },
+                networkDescription = { "1번 (스트림 전송)" },
+                action = { size ->
+                    val testGids = availableGids.take(size)
+                    courseMappingService.bulkInsertWithCopy(testCourse.id, testGids)
+                    verifyInsertCount(size)
+                }
+            )
+        )
+
+        val results = benchmark.run()
+
+        println("\n" + "=".repeat(100))
+        println("상세 표 출력")
+        println("=".repeat(100))
+        PerformanceResultFormatter.printTable(results)
+
+        println("\n" + "=".repeat(100))
+        println("간단한 비교 출력")
+        println("=".repeat(100))
+        PerformanceResultFormatter.printSimpleComparison(results)
+
+        println("\n" + "=".repeat(100))
+        println("분석 결과")
+        println("=".repeat(100))
+        PerformanceResultFormatter.printAnalysis(results)
+
+    }
+
     private fun verifyInsertCount(expectedCount: Int) {
         val actualCount = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM course_segment_mapping WHERE course_id = ?",
             Int::class.java,
-            testCourseId
+            testCourse.id
         ) ?: 0
 
         if (actualCount != expectedCount) {
